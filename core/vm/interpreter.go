@@ -25,6 +25,9 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+// JumpTable contains the EVM opcodes supported at a given fork.
+type JumpTable [256]operation
+
 // Config are the configuration options for the Interpreter
 type Config struct {
 	Debug                   bool      // Enables debugging
@@ -33,7 +36,7 @@ type Config struct {
 	NoBaseFee               bool      // Forces the EIP-1559 baseFee to 0 (needed for 0 price calls)
 	EnablePreimageRecording bool      // Enables recording of SHA3/keccak preimages
 
-	JumpTable [256]*operation // EVM instruction table, automatically populated if unset
+	JumpTable *JumpTable // EVM instruction table, automatically populated if unset
 
 	ExtraEips []int // Additional EIPS that are to be enabled
 }
@@ -71,30 +74,30 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 	// We use the STOP instruction whether to see
 	// the jump table was initialised. If it was not
 	// we'll set the default jump table.
-	if cfg.JumpTable[STOP] == nil {
-		var jt JumpTable
+	if cfg.JumpTable == nil {
+		var jt *JumpTable
 		switch {
 		case evm.chainRules.IsLondon:
-			jt = londonInstructionSet
+			jt = &londonInstructionSet
 		case evm.chainRules.IsBerlin:
-			jt = berlinInstructionSet
+			jt = &berlinInstructionSet
 		case evm.chainRules.IsIstanbul:
-			jt = istanbulInstructionSet
+			jt = &istanbulInstructionSet
 		case evm.chainRules.IsConstantinople:
-			jt = constantinopleInstructionSet
+			jt = &constantinopleInstructionSet
 		case evm.chainRules.IsByzantium:
-			jt = byzantiumInstructionSet
+			jt = &byzantiumInstructionSet
 		case evm.chainRules.IsEIP158:
-			jt = spuriousDragonInstructionSet
+			jt = &spuriousDragonInstructionSet
 		case evm.chainRules.IsEIP150:
-			jt = tangerineWhistleInstructionSet
+			jt = &tangerineWhistleInstructionSet
 		case evm.chainRules.IsHomestead:
-			jt = homesteadInstructionSet
+			jt = &homesteadInstructionSet
 		default:
-			jt = frontierInstructionSet
+			jt = &frontierInstructionSet
 		}
 		for i, eip := range cfg.ExtraEips {
-			if err := EnableEIP(eip, &jt); err != nil {
+			if err := EnableEIP(eip, jt); err != nil {
 				// Disable it, so caller can check if it's activated or not
 				cfg.ExtraEips = append(cfg.ExtraEips[:i], cfg.ExtraEips[i+1:]...)
 				log.Error("EIP activation failed", "eip", eip, "error", err)
