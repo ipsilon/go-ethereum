@@ -166,7 +166,6 @@ func newByzantiumInstructionSet() JumpTable {
 		minStack:   minStack(2, 0),
 		maxStack:   maxStack(2, 0),
 		memorySize: memoryRevert,
-		reverts:    true,
 		returns:    true,
 	}
 	return instructionSet
