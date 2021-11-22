@@ -128,7 +128,6 @@ func newConstantinopleInstructionSet() JumpTable {
 		maxStack:    maxStack(4, 1),
 		memorySize:  memoryCreate2,
 		writes:      true,
-		returns:     true,
 	}
 	return instructionSet
 }
@@ -144,7 +143,6 @@ func newByzantiumInstructionSet() JumpTable {
 		minStack:    minStack(6, 1),
 		maxStack:    maxStack(6, 1),
 		memorySize:  memoryStaticCall,
-		returns:     true,
 	}
 	instructionSet[RETURNDATASIZE] = &operation{
 		execute:     opReturnDataSize,
@@ -166,7 +164,6 @@ func newByzantiumInstructionSet() JumpTable {
 		minStack:   minStack(2, 0),
 		maxStack:   maxStack(2, 0),
 		memorySize: memoryRevert,
-		returns:    true,
 	}
 	return instructionSet
 }
@@ -203,7 +200,6 @@ func newHomesteadInstructionSet() JumpTable {
 		minStack:    minStack(6, 1),
 		maxStack:    maxStack(6, 1),
 		memorySize:  memoryDelegateCall,
-		returns:     true,
 	}
 	return instructionSet
 }
@@ -989,7 +985,6 @@ func newFrontierInstructionSet() JumpTable {
 			maxStack:    maxStack(3, 1),
 			memorySize:  memoryCreate,
 			writes:      true,
-			returns:     true,
 		},
 		CALL: {
 			execute:     opCall,
@@ -998,7 +993,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:    minStack(7, 1),
 			maxStack:    maxStack(7, 1),
 			memorySize:  memoryCall,
-			returns:     true,
 		},
 		CALLCODE: {
 			execute:     opCallCode,
@@ -1007,7 +1001,6 @@ func newFrontierInstructionSet() JumpTable {
 			minStack:    minStack(7, 1),
 			maxStack:    maxStack(7, 1),
 			memorySize:  memoryCall,
-			returns:     true,
 		},
 		RETURN: {
 			execute:    opReturn,

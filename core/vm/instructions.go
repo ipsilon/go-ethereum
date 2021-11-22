@@ -596,8 +596,11 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]b
 	scope.Contract.Gas += returnGas
 
 	if suberr == ErrExecutionReverted {
+		// set the return data
+		interpreter.returnData = res
 		return res, nil
 	}
+	interpreter.returnData = nil
 	return nil, nil
 }
 
@@ -632,8 +635,11 @@ func opCreate2(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]
 	scope.Contract.Gas += returnGas
 
 	if suberr == ErrExecutionReverted {
+		// set the return data
+		interpreter.returnData = res
 		return res, nil
 	}
+	interpreter.returnData = nil
 	return nil, nil
 }
 
@@ -672,6 +678,8 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byt
 	}
 	scope.Contract.Gas += returnGas
 
+	// set the return data
+	interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -707,6 +715,8 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([
 	}
 	scope.Contract.Gas += returnGas
 
+	// set the return data
+	interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -735,6 +745,8 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 	}
 	scope.Contract.Gas += returnGas
 
+	// set the return data
+	interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -763,6 +775,8 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 	}
 	scope.Contract.Gas += returnGas
 
+	// set the return data
+	interpreter.returnData = ret
 	return ret, nil
 }
 
@@ -777,6 +791,8 @@ func opRevert(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]b
 	offset, size := scope.Stack.pop(), scope.Stack.pop()
 	ret := scope.Memory.GetPtr(int64(offset.Uint64()), int64(size.Uint64()))
 
+	// set the return data
+	interpreter.returnData = ret
 	return ret, ErrExecutionReverted
 }
 
