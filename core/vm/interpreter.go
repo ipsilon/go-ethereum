@@ -17,12 +17,10 @@
 package vm
 
 import (
-	"hash"
-	"sync/atomic"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/log"
+	"hash"
 )
 
 // Config are the configuration options for the Interpreter
@@ -180,17 +178,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
-	steps := 0
 	for {
-		steps++
-		if steps%1000 == 0 && atomic.LoadInt32(&in.evm.abort) != 0 {
-			break
-		}
-		if in.cfg.Debug {
-			// Capture pre-execution values for tracing.
-			logged, pcCopy, gasCopy = false, pc, contract.Gas
-		}
-
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = 0
@@ -205,17 +193,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		} else if sLen > operation.maxStack {
 			return nil, &ErrStackOverflow{stackLen: sLen, limit: operation.maxStack}
 		}
-		// If the operation is valid, enforce write restrictions
-		if in.readOnly && in.evm.chainRules.IsByzantium {
-			// If the interpreter is operating in readonly mode, make sure no
-			// state-modifying operation is performed. The 3rd stack item
-			// for a call operation is the value. Transferring value from one
-			// account to the others means the state is modified and should also
-			// return with an error.
-			if operation.writes || (op == CALL && stack.Back(2).Sign() != 0) {
-				return nil, ErrWriteProtection
-			}
-		}
+
 		// Static portion of gas
 		cost = operation.constantGas // For tracing
 		if !contract.UseGas(operation.constantGas) {
@@ -251,11 +229,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}
 		if memorySize > 0 {
 			mem.Resize(memorySize)
-		}
-
-		if in.cfg.Debug {
-			in.cfg.Tracer.CaptureState(pc, op, gasCopy, cost, callContext, in.returnData, in.evm.depth, err)
-			logged = true
 		}
 
 		// execute the operation
