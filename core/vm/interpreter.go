@@ -196,7 +196,11 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
-		op = contract.GetOp(pc)
+		op = 0
+		if int(pc) < len(contract.Code) {
+			op = OpCode(contract.Code[pc])
+		}
+
 		operation := in.cfg.JumpTable[op]
 		// Validate stack
 		if sLen := stack.len(); sLen < operation.minStack {
