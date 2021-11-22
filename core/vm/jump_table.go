@@ -207,7 +207,7 @@ func newHomesteadInstructionSet() JumpTable {
 // newFrontierInstructionSet returns the frontier instructions
 // that can be executed during the frontier phase.
 func newFrontierInstructionSet() JumpTable {
-	return JumpTable{
+	tbl := JumpTable{
 		STOP: {
 			execute:     opStop,
 			constantGas: 0,
@@ -1017,4 +1017,12 @@ func newFrontierInstructionSet() JumpTable {
 			writes:     true,
 		},
 	}
+
+	for i, entry := range tbl {
+		if entry == nil {
+			tbl[i] = &operation{execute: opUndefined}
+		}
+	}
+
+	return tbl
 }
