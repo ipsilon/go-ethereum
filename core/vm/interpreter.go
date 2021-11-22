@@ -276,5 +276,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			pc++
 		}
 	}
-	return nil, nil
+
+	return res, err
 }
