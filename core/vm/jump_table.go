@@ -93,6 +93,7 @@ func newConstantinopleInstructionSet() JumpTable {
 	instructionSet[SHL] = &operation{
 		execute:     opSHL,
 		constantGas: GasFastestStep,
+		calculateGas: chargeGasFastestStep,
 		minStack:    minStack(2, 1),
 		maxStack:    maxStack(2, 1),
 	}
