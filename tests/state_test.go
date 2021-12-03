@@ -20,6 +20,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -162,19 +166,73 @@ func benchWalk(b *testing.B, dir string, runTest interface{}) {
 
 func BenchmarkState(b *testing.B) {
 	{
-		benchWalk(b, benchmarksDir, func(b *testing.B, name string, test *StateTest) {
-			for _, subtest := range test.Subtests() {
+		benchWalk(b, benchmarksDir, func(b *testing.B, name string, t *StateTest) {
+			for _, subtest := range t.Subtests() {
 				subtest := subtest
 				key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
 
 				b.Run(key, func(b *testing.B) {
-					config := vm.Config{}
-					for n := 0; n < b.N; n++ {
-						_, _, _, err := test.RunNoVerify(subtest, config, false)
+					vmconfig := vm.Config{}
+
+					config, eips, err := GetChainConfig(subtest.Fork)
+					if err != nil {
+						b.Error(err)
+						return
+					}
+					vmconfig.ExtraEips = eips
+					block := t.genesis(config).ToBlock(nil)
+					_, statedb := MakePreState(rawdb.NewMemoryDatabase(), t.json.Pre, false)
+
+					var baseFee *big.Int
+					if config.IsLondon(new(big.Int)) {
+						baseFee = t.json.Env.BaseFee
+						if baseFee == nil {
+							// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
+							// parent - 2 : 0xa as the basefee for 'this' context.
+							baseFee = big.NewInt(0x0a)
+						}
+					}
+					post := t.json.Post[subtest.Fork][subtest.Index]
+					msg, err := t.json.Tx.toMessage(post, baseFee)
+					if err != nil {
+						b.Error(err)
+						return
+					}
+
+					// Try to recover tx with current signer
+					if len(post.TxBytes) != 0 {
+						var ttx types.Transaction
+						err := ttx.UnmarshalBinary(post.TxBytes)
 						if err != nil {
 							b.Error(err)
 							return
 						}
+
+						if _, err := types.Sender(types.LatestSigner(config), &ttx); err != nil {
+							b.Error(err)
+							return
+						}
+					}
+
+					// Prepare the EVM.
+					txContext := core.NewEVMTxContext(msg)
+					context := core.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
+					context.GetHash = vmTestBlockHash
+					context.BaseFee = baseFee
+					evm := vm.NewEVM(context, txContext, statedb, config, vmconfig)
+
+					sender := vm.AccountRef(msg.From())
+					b.ResetTimer()
+					for n := 0; n < b.N; n++ {
+						// Execute the message.
+						snapshot := statedb.Snapshot()
+						// FIXME: This should also be inlined and we should call Interpreter.Run() directly.
+						_, _, err = evm.Call(sender, *msg.To(), msg.Data(), msg.Gas(), msg.Value())
+						if err != nil {
+							b.Error(err)
+							return
+						}
+						statedb.RevertToSnapshot(snapshot)
 					}
 
 				})
