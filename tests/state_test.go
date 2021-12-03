@@ -20,7 +20,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -61,6 +64,7 @@ func TestState(t *testing.T) {
 	for _, dir := range []string{
 		stateTestDir,
 		legacyStateTestDir,
+		benchmarksDir, // FIXME: This does not seem to work, but we want to test benchmarks!
 	} {
 		st.walk(t, dir, func(t *testing.T, name string, test *StateTest) {
 			for _, subtest := range test.Subtests() {
@@ -91,6 +95,88 @@ func TestState(t *testing.T) {
 						}
 						return st.checkFailure(t, err)
 					})
+				})
+			}
+		})
+	}
+}
+
+func runBenchFunc(runTest interface{}, b *testing.B, name string, m reflect.Value, key string) {
+	reflect.ValueOf(runTest).Call([]reflect.Value{
+		reflect.ValueOf(b),
+		reflect.ValueOf(name),
+		m.MapIndex(reflect.ValueOf(key)),
+	})
+}
+
+func makeMapFromBenchFunc(f interface{}) reflect.Value {
+	stringT := reflect.TypeOf("")
+	testingT := reflect.TypeOf((*testing.B)(nil))
+	ftyp := reflect.TypeOf(f)
+	if ftyp.Kind() != reflect.Func || ftyp.NumIn() != 3 || ftyp.NumOut() != 0 || ftyp.In(0) != testingT || ftyp.In(1) != stringT {
+		panic(fmt.Sprintf("bad test function type: want func(*testing.T, string, <TestType>), have %s", ftyp))
+	}
+	testType := ftyp.In(2)
+	mp := reflect.New(reflect.MapOf(stringT, testType))
+	return mp.Elem()
+}
+
+func runBenchFile(b *testing.B, path, name string, runTest interface{}) {
+	// Load the file as map[string]<testType>.
+	m := makeMapFromBenchFunc(runTest)
+	if err := readJSONFile(path, m.Addr().Interface()); err != nil {
+		b.Fatal(err)
+		return
+	}
+
+	// Run all tests from the map. Don't wrap in a subtest if there is only one test in the file.
+	keys := sortedMapKeys(m)
+	if len(keys) != 1 {
+		b.Fatal("wrong number of keys")
+		return
+	}
+	runBenchFunc(runTest, b, name, m, keys[0])
+}
+
+func benchWalk(b *testing.B, dir string, runTest interface{}) {
+	// Walk the directory.
+	dirinfo, err := os.Stat(dir)
+	if os.IsNotExist(err) || !dirinfo.IsDir() {
+		fmt.Fprintf(os.Stderr, "can't find test files in %s, did you clone the tests submodule?\n", dir)
+		b.Skip("missing test files")
+	}
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		name := filepath.ToSlash(strings.TrimPrefix(path, dir+string(filepath.Separator)))
+		if info.IsDir() {
+			return nil
+		}
+		if filepath.Ext(path) == ".json" {
+			b.Run(name, func(b *testing.B) { runBenchFile(b, path, name, runTest) })
+		}
+		return nil
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+}
+
+func BenchmarkState(b *testing.B) {
+	{
+		benchWalk(b, benchmarksDir, func(b *testing.B, name string, test *StateTest) {
+			for _, subtest := range test.Subtests() {
+				subtest := subtest
+				key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
+
+				b.Run(key, func(b *testing.B) {
+					config := vm.Config{}
+					for n := 0; n < b.N; n++ {
+						_, _, _, err := test.RunNoVerify(subtest, config, false)
+						if err != nil {
+							b.Error(err)
+							return
+						}
+					}
+
 				})
 			}
 		})
