@@ -221,13 +221,28 @@ func BenchmarkState(b *testing.B) {
 					context.BaseFee = baseFee
 					evm := vm.NewEVM(context, txContext, statedb, config, vmconfig)
 
+					destAddr := msg.To()
+					destAcc := vm.AccountRef(*destAddr)
 					sender := vm.AccountRef(msg.From())
+
+					// If the account has no code, we can abort here
+					// The depth-check is already done, and precompiles handled above
+					contract := vm.NewContract(sender, destAcc, msg.Value(), 0)
+					contract.SetCallCode(destAddr, evm.StateDB.GetCodeHash(*destAddr), evm.StateDB.GetCode(*destAddr))
+
+					interpreter := vm.NewEVMInterpreter(evm, vmconfig)
+
 					b.ResetTimer()
 					for n := 0; n < b.N; n++ {
 						// Execute the message.
 						snapshot := statedb.Snapshot()
-						// FIXME: This should also be inlined and we should call Interpreter.Run() directly.
-						_, _, err = evm.Call(sender, *msg.To(), msg.Data(), msg.Gas(), msg.Value())
+
+						contract.Gas = msg.Gas()
+						_, err = interpreter.Run(contract, msg.Data(), false)
+
+
+						//_, _, err = evm.Call(sender, *msg.To(), msg.Data(), msg.Gas(), msg.Value())
+
 						if err != nil {
 							b.Error(err)
 							return
