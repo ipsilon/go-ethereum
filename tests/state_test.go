@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -68,7 +66,7 @@ func TestState(t *testing.T) {
 	for _, dir := range []string{
 		stateTestDir,
 		legacyStateTestDir,
-		benchmarksDir, // FIXME: This does not seem to work, but we want to test benchmarks!
+		evmBenchmarksDir,
 	} {
 		st.walk(t, dir, func(t *testing.T, name string, test *StateTest) {
 			for _, subtest := range test.Subtests() {
@@ -99,157 +97,6 @@ func TestState(t *testing.T) {
 						}
 						return st.checkFailure(t, err)
 					})
-				})
-			}
-		})
-	}
-}
-
-func runBenchFunc(runTest interface{}, b *testing.B, name string, m reflect.Value, key string) {
-	reflect.ValueOf(runTest).Call([]reflect.Value{
-		reflect.ValueOf(b),
-		reflect.ValueOf(name),
-		m.MapIndex(reflect.ValueOf(key)),
-	})
-}
-
-func makeMapFromBenchFunc(f interface{}) reflect.Value {
-	stringT := reflect.TypeOf("")
-	testingT := reflect.TypeOf((*testing.B)(nil))
-	ftyp := reflect.TypeOf(f)
-	if ftyp.Kind() != reflect.Func || ftyp.NumIn() != 3 || ftyp.NumOut() != 0 || ftyp.In(0) != testingT || ftyp.In(1) != stringT {
-		panic(fmt.Sprintf("bad test function type: want func(*testing.T, string, <TestType>), have %s", ftyp))
-	}
-	testType := ftyp.In(2)
-	mp := reflect.New(reflect.MapOf(stringT, testType))
-	return mp.Elem()
-}
-
-func runBenchFile(b *testing.B, path, name string, runTest interface{}) {
-	// Load the file as map[string]<testType>.
-	m := makeMapFromBenchFunc(runTest)
-	if err := readJSONFile(path, m.Addr().Interface()); err != nil {
-		b.Fatal(err)
-		return
-	}
-
-	// Run all tests from the map. Don't wrap in a subtest if there is only one test in the file.
-	keys := sortedMapKeys(m)
-	if len(keys) != 1 {
-		b.Fatal("wrong number of keys")
-		return
-	}
-	runBenchFunc(runTest, b, name, m, keys[0])
-}
-
-func benchWalk(b *testing.B, dir string, runTest interface{}) {
-	// Walk the directory.
-	dirinfo, err := os.Stat(dir)
-	if os.IsNotExist(err) || !dirinfo.IsDir() {
-		fmt.Fprintf(os.Stderr, "can't find test files in %s, did you clone the tests submodule?\n", dir)
-		b.Skip("missing test files")
-	}
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		name := filepath.ToSlash(strings.TrimPrefix(path, dir+string(filepath.Separator)))
-		if info.IsDir() {
-			return nil
-		}
-		if filepath.Ext(path) == ".json" {
-			b.Run(name, func(b *testing.B) { runBenchFile(b, path, name, runTest) })
-		}
-		return nil
-	})
-	if err != nil {
-		b.Fatal(err)
-	}
-}
-
-func BenchmarkState(b *testing.B) {
-	{
-		benchWalk(b, benchmarksDir, func(b *testing.B, name string, t *StateTest) {
-			for _, subtest := range t.Subtests() {
-				subtest := subtest
-				key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
-
-				b.Run(key, func(b *testing.B) {
-					vmconfig := vm.Config{}
-
-					config, eips, err := GetChainConfig(subtest.Fork)
-					if err != nil {
-						b.Error(err)
-						return
-					}
-					vmconfig.ExtraEips = eips
-					block := t.genesis(config).ToBlock(nil)
-					_, statedb := MakePreState(rawdb.NewMemoryDatabase(), t.json.Pre, false)
-
-					var baseFee *big.Int
-					if config.IsLondon(new(big.Int)) {
-						baseFee = t.json.Env.BaseFee
-						if baseFee == nil {
-							// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
-							// parent - 2 : 0xa as the basefee for 'this' context.
-							baseFee = big.NewInt(0x0a)
-						}
-					}
-					post := t.json.Post[subtest.Fork][subtest.Index]
-					msg, err := t.json.Tx.toMessage(post, baseFee)
-					if err != nil {
-						b.Error(err)
-						return
-					}
-
-					// Try to recover tx with current signer
-					if len(post.TxBytes) != 0 {
-						var ttx types.Transaction
-						err := ttx.UnmarshalBinary(post.TxBytes)
-						if err != nil {
-							b.Error(err)
-							return
-						}
-
-						if _, err := types.Sender(types.LatestSigner(config), &ttx); err != nil {
-							b.Error(err)
-							return
-						}
-					}
-
-					// Prepare the EVM.
-					txContext := core.NewEVMTxContext(msg)
-					context := core.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
-					context.GetHash = vmTestBlockHash
-					context.BaseFee = baseFee
-					evm := vm.NewEVM(context, txContext, statedb, config, vmconfig)
-
-					destAddr := msg.To()
-					destAcc := vm.AccountRef(*destAddr)
-					sender := vm.AccountRef(msg.From())
-
-					// If the account has no code, we can abort here
-					// The depth-check is already done, and precompiles handled above
-					contract := vm.NewContract(sender, destAcc, msg.Value(), 0)
-					contract.SetCallCode(destAddr, evm.StateDB.GetCodeHash(*destAddr), evm.StateDB.GetCode(*destAddr))
-
-					interpreter := vm.NewEVMInterpreter(evm, vmconfig)
-
-					b.ResetTimer()
-					for n := 0; n < b.N; n++ {
-						// Execute the message.
-						snapshot := statedb.Snapshot()
-
-						contract.Gas = msg.Gas()
-						_, err = interpreter.Run(contract, msg.Data(), false)
-
-
-						//_, _, err = evm.Call(sender, *msg.To(), msg.Data(), msg.Gas(), msg.Value())
-
-						if err != nil {
-							b.Error(err)
-							return
-						}
-						statedb.RevertToSnapshot(snapshot)
-					}
-
 				})
 			}
 		})
@@ -289,4 +136,92 @@ func withTrace(t *testing.T, gasLimit uint64, test func(vm.Config) error) {
 	}
 	// t.Logf("EVM output: 0x%x", tracer.Output())
 	// t.Logf("EVM error: %v", tracer.Error())
+}
+
+func BenchmarkEVM(b *testing.B) {
+	// Walk the directory.
+	dir := evmBenchmarksDir
+	dirinfo, err := os.Stat(dir)
+	if os.IsNotExist(err) || !dirinfo.IsDir() {
+		fmt.Fprintf(os.Stderr, "can't find test files in %s, did you clone the evm-benchmarks submodule?\n", dir)
+		b.Skip("missing test files")
+	}
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		if ext := filepath.Ext(path); ext == ".json" {
+			name := filepath.ToSlash(strings.TrimPrefix(strings.TrimSuffix(path, ext), dir+string(filepath.Separator)))
+			b.Run(name, func(b *testing.B) { runBenchmarkFile(b, path) })
+		}
+		return nil
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+}
+
+func runBenchmarkFile(b *testing.B, path string) {
+	m := make(map[string]StateTest)
+	if err := readJSONFile(path, &m); err != nil {
+		b.Fatal(err)
+		return
+	}
+	if len(m) != 1 {
+		b.Fatal("expected single benchmark in a file")
+		return
+	}
+	for _, t := range m {
+		runBenchmark(b, &t)
+	}
+}
+
+func runBenchmark(b *testing.B, t *StateTest) {
+	for _, subtest := range t.Subtests() {
+		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
+
+		b.Run(key, func(b *testing.B) {
+			vmconfig := vm.Config{}
+			config, eips, err := GetChainConfig(subtest.Fork)
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			vmconfig.ExtraEips = eips
+			block := t.genesis(config).ToBlock(nil)
+			_, statedb := MakePreState(rawdb.NewMemoryDatabase(), t.json.Pre, false)
+
+			post := t.json.Post[subtest.Fork][subtest.Index]
+			msg, err := t.json.Tx.toMessage(post, t.json.Env.BaseFee)
+			if err != nil {
+				b.Error(err)
+				return
+			}
+
+			// Prepare the EVM.
+			txContext := core.NewEVMTxContext(msg)
+			context := core.NewEVMBlockContext(block.Header(), nil, &t.json.Env.Coinbase)
+			context.GetHash = vmTestBlockHash
+			context.BaseFee = t.json.Env.BaseFee
+			evm := vm.NewEVM(context, txContext, statedb, config, vmconfig)
+			destAddr := msg.To()
+			destAcc := vm.AccountRef(*destAddr)
+			sender := vm.AccountRef(msg.From())
+			contract := vm.NewContract(sender, destAcc, msg.Value(), 0)
+			contract.SetCallCode(destAddr, evm.StateDB.GetCodeHash(*destAddr), evm.StateDB.GetCode(*destAddr))
+			interpreter := vm.NewEVMInterpreter(evm, vmconfig)
+
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				snapshot := statedb.Snapshot()
+				contract.Gas = msg.Gas()
+				_, err = interpreter.Run(contract, msg.Data(), false)
+				if err != nil {
+					b.Error(err)
+					return
+				}
+				statedb.RevertToSnapshot(snapshot)
+			}
+		})
+	}
 }
