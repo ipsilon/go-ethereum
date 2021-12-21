@@ -893,8 +893,7 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 		}
 
 		integer := new(uint256.Int)
-		scope.Stack.push(integer.SetBytes(common.RightPadBytes(
-			scope.Contract.Code[startMin:endMin], pushByteSize)))
+		scope.Stack.push(integer.SetBytes(scope.Contract.Code[startMin:endMin]))
 
 		*pc += size
 		return nil, nil
