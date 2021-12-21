@@ -889,7 +889,7 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 			integer.SetBytes(data)
 		}
 		scope.Stack.push(integer)
-		*pc += size
+		*pc = uint64(end)
 		return nil, nil
 	}
 }
