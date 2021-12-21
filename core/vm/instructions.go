@@ -878,7 +878,7 @@ func opPush1(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]by
 }
 
 // make push instruction function
-func makePush(size uint64, pushByteSize int) executionFunc {
+func makePush(pushByteSize int) executionFunc {
 	return func(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 		codeLen := len(scope.Contract.Code)
 		integer := new(uint256.Int)
