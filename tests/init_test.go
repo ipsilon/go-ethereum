@@ -18,6 +18,7 @@ package tests
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -31,6 +32,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/params"
 )
+
+var (
+	testEVM = flag.String("vm.evm", "", "EVM configuration")
+)
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
 
 var (
 	baseDir            = filepath.Join(".", "testdata")

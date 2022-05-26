@@ -803,6 +803,12 @@ var (
 		Value: metrics.DefaultConfig.InfluxDBTags,
 	}
 
+	EVMInterpreterFlag = cli.StringFlag{
+		Name:  "vm.evm",
+		Usage: "External EVM configuration (default = build-int interpreter)",
+		Value: "",
+	}
+
 	MetricsEnableInfluxDBV2Flag = cli.BoolFlag{
 		Name:  "metrics.influxdbv2",
 		Usage: "Enable metrics export/push to an external InfluxDB v2 database",
@@ -1682,6 +1688,10 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 	if ctx.GlobalIsSet(VMEnableDebugFlag.Name) {
 		// TODO(fjl): force-enable this in --dev mode
 		cfg.EnablePreimageRecording = ctx.GlobalBool(VMEnableDebugFlag.Name)
+	}
+
+	if ctx.GlobalIsSet(EVMInterpreterFlag.Name) {
+		cfg.EVMInterpreter = ctx.GlobalString(EVMInterpreterFlag.Name)
 	}
 
 	if ctx.GlobalIsSet(RPCGlobalGasCapFlag.Name) {

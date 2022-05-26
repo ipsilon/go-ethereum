@@ -189,6 +189,8 @@ type Config struct {
 	// Miscellaneous options
 	DocRoot string `toml:"-"`
 
+	EVMInterpreter string
+
 	// RPCGasCap is the global gas cap for eth-call variants.
 	RPCGasCap uint64
 
