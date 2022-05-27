@@ -22,6 +22,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/evmc/v10/bindings/go/evmc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
@@ -152,6 +153,12 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 		chainRules:   chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Random != nil),
 		interpreters: make([]Interpreter, 0, 1),
 	}
+
+	if config.EVMInterpreter != "" {
+		// Create custom EVM.
+		evm.interpreters = append(evm.interpreters, &EVMC{evmModule, evm, evmc.CapabilityEVM1, false}) //(config.EVMInterpreter, evm))
+	}
+
 	evm.interpreters = append(evm.interpreters, NewEVMInterpreter(evm, config))
 	evm.interpreter = evm.interpreters[0]
 	return evm
