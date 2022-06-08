@@ -156,7 +156,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 
 	if config.EVMInterpreter != "" {
 		// Create custom EVM.
-		evm.interpreters = append(evm.interpreters, &EVMC{evmModule, evm, evmc.CapabilityEVM1, false}) //(config.EVMInterpreter, evm))
+		evm.interpreters = append(evm.interpreters, &EVMC{evmModule, evm, evmc.CapabilityEVM1, false})
 	}
 
 	evm.interpreters = append(evm.interpreters, NewEVMInterpreter(evm, config))
@@ -404,7 +404,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 		// When an error was returned by the EVM or when setting the creation code
 		// above we revert to the snapshot and consume any gas remaining. Additionally
 		// when we're in Homestead this also counts for code storage gas errors.
-		ret, err = run(evm, contract, input, false) // evm.interpreter.Run(contract, input, true)
+		ret, err = run(evm, contract, input, true) // evm.interpreter.Run(contract, input, true)
 		gas = contract.Gas
 	}
 	if err != nil {
