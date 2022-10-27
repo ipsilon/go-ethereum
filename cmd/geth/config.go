@@ -267,8 +267,6 @@ func applyMetricConfig(ctx *cli.Context, cfg *gethConfig) {
 
 func deprecated(field string) bool {
 	switch field {
-	case "ethconfig.Config.EVMInterpreter":
-		return true
 	case "ethconfig.Config.EWASMInterpreter":
 		return true
 	default:

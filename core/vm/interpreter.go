@@ -33,7 +33,15 @@ type Config struct {
 
 	JumpTable *JumpTable // EVM instruction table, automatically populated if unset
 
+	EVMInterpreter string
+
 	ExtraEips []int // Additional EIPS that are to be enabled
+}
+
+type Interpreter interface {
+	Run(contract *Contract, input []byte, static bool) ([]byte, error)
+
+	CanRun([]byte) bool
 }
 
 // ScopeContext contains the things that are per-call, such as stack and memory,
@@ -248,4 +256,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	}
 
 	return res, err
+}
+
+func (in *EVMInterpreter) CanRun(code []byte) bool {
+	return true
 }

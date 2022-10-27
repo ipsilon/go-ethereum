@@ -54,6 +54,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		GPO                             gasprice.Config
 		EnablePreimageRecording         bool
 		DocRoot                         string `toml:"-"`
+		EVMInterpreter                  string
 		RPCGasCap                       uint64
 		RPCEVMTimeout                   time.Duration
 		RPCTxFeeCap                     float64
@@ -99,6 +100,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
+	enc.EVMInterpreter = c.EVMInterpreter
 	enc.RPCGasCap = c.RPCGasCap
 	enc.RPCEVMTimeout = c.RPCEVMTimeout
 	enc.RPCTxFeeCap = c.RPCTxFeeCap
@@ -148,6 +150,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		GPO                             *gasprice.Config
 		EnablePreimageRecording         *bool
 		DocRoot                         *string `toml:"-"`
+		EVMInterpreter                  *string
 		RPCGasCap                       *uint64
 		RPCEVMTimeout                   *time.Duration
 		RPCTxFeeCap                     *float64
@@ -267,6 +270,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	}
 	if dec.DocRoot != nil {
 		c.DocRoot = *dec.DocRoot
+	}
+	if dec.EVMInterpreter != nil {
+		c.EVMInterpreter = *dec.EVMInterpreter
 	}
 	if dec.RPCGasCap != nil {
 		c.RPCGasCap = *dec.RPCGasCap

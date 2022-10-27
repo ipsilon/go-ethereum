@@ -110,7 +110,7 @@ const traceErrorLimit = 400000
 
 func withTrace(t *testing.T, gasLimit uint64, test func(vm.Config) error) {
 	// Use config from command line arguments.
-	config := vm.Config{}
+	config := vm.Config{EVMInterpreter: *testEVM}
 	err := test(config)
 	if err == nil {
 		return
