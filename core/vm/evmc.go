@@ -115,7 +115,7 @@ func (host *hostContext) GetStorage(addr evmc.Address, key evmc.Hash) evmc.Hash 
 func (host *hostContext) SetStorage(addr evmc.Address, key evmc.Hash, value evmc.Hash) (status evmc.StorageStatus) {
 	oldValue := host.env.StateDB.GetState(common.Address(addr), common.Hash(key))
 	if evmc.Hash(oldValue) == value {
-		return evmc.StorageUnchanged
+		return evmc.StorageAssigned
 	}
 
 	current := host.env.StateDB.GetState(common.Address(addr), common.Hash(key))
@@ -162,7 +162,7 @@ func (host *hostContext) SetStorage(addr evmc.Address, key evmc.Hash, value evmc
 			host.env.StateDB.AddRefund(params.NetSstoreResetRefund)
 		}
 	}
-	return evmc.StorageModifiedAgain
+	return evmc.StorageModified
 }
 
 func (host *hostContext) GetBalance(addr evmc.Address) evmc.Hash {
@@ -184,13 +184,15 @@ func (host *hostContext) GetCode(addr evmc.Address) []byte {
 	return host.env.StateDB.GetCode(common.Address(addr))
 }
 
-func (host *hostContext) Selfdestruct(addr evmc.Address, beneficiary evmc.Address) {
+func (host *hostContext) Selfdestruct(addr evmc.Address, beneficiary evmc.Address) bool {
 	db := host.env.StateDB
 	if !db.HasSuicided(common.Address(addr)) {
 		db.AddRefund(params.SelfdestructRefundGas)
+		return true
 	}
 	db.AddBalance(common.Address(beneficiary), db.GetBalance(common.Address(addr)))
 	db.Suicide(common.Address(addr))
+	return false
 }
 
 func (host *hostContext) GetTxContext() evmc.TxContext {
@@ -223,7 +225,7 @@ func (host *hostContext) EmitLog(addr evmc.Address, topics []evmc.Hash, data []b
 
 func (host *hostContext) Call(kind evmc.CallKind,
 	destination evmc.Address, sender evmc.Address, value evmc.Hash, input []byte, gas int64, depth int,
-	static bool, salt evmc.Hash, codeAddress evmc.Address) (output []byte, gasLeft int64, createAddr evmc.Address, err error) {
+	static bool, salt evmc.Hash, codeAddress evmc.Address) (output []byte, gasLeft int64, gasRefund int64, createAddr evmc.Address, err error) {
 
 	gasU := uint64(gas)
 	var gasLeftU uint64
@@ -278,8 +280,9 @@ func (host *hostContext) Call(kind evmc.CallKind,
 		err = evmc.Failure
 	}
 
+	gasRefund = int64(host.env.StateDB.GetRefund())
 	gasLeft = int64(gasLeftU)
-	return output, gasLeft, createAddr, err
+	return output, gasLeft, gasRefund, createAddr, err
 }
 
 func (host *hostContext) AccessAccount(addr evmc.Address) evmc.AccessStatus {
