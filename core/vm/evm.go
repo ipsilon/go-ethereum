@@ -449,6 +449,7 @@ func hasEIP3540And3670(vmConfig *Config) bool {
 func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address, typ OpCode) ([]byte, common.Address, uint64, error) {
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
+	is_eof_initcode := false
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, common.Address{}, gas, ErrDepth
 	}
@@ -473,6 +474,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	// Try to read code header if it claims to be EOF-formatted.
 	var header EOF1Header
 	if hasEIP3540And3670(&evm.Config) && hasEOFMagic(codeAndHash.code) {
+		is_eof_initcode = true
 		var err error
 		header, err = validateEOF(codeAndHash.code, evm.interpreter.cfg.JumpTable)
 		if err != nil {
@@ -525,6 +527,10 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 			// Reject code starting with 0xEF in London.
 			err = ErrInvalidCode
 		}
+	}
+
+	if err == nil && (is_eof_initcode && !hasFormatByte(ret)) {
+		err = ErrInvalidCode // Reject Legacy code
 	}
 
 	// if the contract creation ran successfully and no errors were returned
