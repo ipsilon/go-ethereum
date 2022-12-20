@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -125,7 +126,7 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
 func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
-	fmt.Println("> Contract:", contract.Code)
+	fmt.Println("[interpreter.go] Contract:", hex.EncodeToString(contract.Code))
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
 	defer func() { in.evm.depth-- }()
@@ -198,6 +199,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
+	fmt.Println("here?")
 	for {
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
@@ -206,6 +208,10 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc, callContext.CodeSection)
+		//fmt.Println("[interpreter.go Code:", hex.EncodeToString(contract.Container.Code[callContext.CodeSection]))
+		fmt.Println("[interpreter.go] pc:", pc)
+		fmt.Println("[interpreter.go] callContext.CodeSection:", callContext.CodeSection)
+		fmt.Println("[interpreter.go] op:", op)
 		operation := jt[op]
 		cost = operation.constantGas // For tracing
 		// Validate stack
