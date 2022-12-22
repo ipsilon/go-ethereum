@@ -3512,7 +3512,6 @@ func TestEIP1559Transition(t *testing.T) {
 
 	gspec.Config.BerlinBlock = common.Big0
 	gspec.Config.LondonBlock = common.Big0
-	gspec.Config.LondonBlock = common.Big0
 	signer := types.LatestSigner(gspec.Config)
 
 	genDb, blocks, _ := GenerateChainWithGenesis(gspec, engine, 1, func(i int, b *BlockGen) {
