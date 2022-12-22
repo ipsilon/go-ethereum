@@ -17,7 +17,6 @@
 package vm
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sync/atomic"
@@ -408,7 +407,6 @@ func (c *codeAndHash) Hash() common.Hash {
 
 // create creates a new contract using code as deployment code.
 func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *big.Int, address common.Address, typ OpCode) ([]byte, common.Address, uint64, error) {
-	fmt.Println("[evm.go] create")
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	if evm.depth > int(params.CallCreateDepth) {
@@ -438,21 +436,14 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	contract := NewContract(caller, AccountRef(address), value, gas)
 	contract.SetCodeOptionalHash(&address, codeAndHash)
 
-	fmt.Println("[evm.go] here1")
-	fmt.Println("[evm.go] isShanghai:", evm.chainRules.IsShanghai)
-	fmt.Println("[evm.go] hasEOFByte:", hasEOFByte(codeAndHash.code))
-	fmt.Println("[evm.go] code:", hex.EncodeToString(codeAndHash.code))
 	// If the initcode is EOF, verify it is well-formed.
 	if evm.chainRules.IsShanghai && hasEOFByte(codeAndHash.code) {
 		var c Container
-		fmt.Println("[evm.go] Unmarshaling")
 		if err := c.UnmarshalBinary(codeAndHash.code); err != nil {
-			fmt.Println("[evm.go] err??: ", err)
 			return nil, common.Address{}, 0, fmt.Errorf("%v: %v", ErrInvalidEOF, err)
 		}
 		contract.Container = &c
 	}
-	fmt.Println("[evm.go] here2")
 
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
@@ -471,19 +462,12 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	}
 
 	ret, err := evm.interpreter.Run(contract, nil, false)
-	fmt.Println("[eof.go]~err:", err)
 
 	// Check whether the max code size has been exceeded, assign err if the case.
 	if err == nil && evm.chainRules.IsEIP158 && len(ret) > params.MaxCodeSize {
 		err = ErrMaxCodeSizeExceeded
 	}
 
-	fmt.Println("[evm.go] ret:", hex.EncodeToString(ret))
-	fmt.Println("[evm.go] err:", err)
-	fmt.Println("[evm.go] len(ret):", len(ret))
-	//fmt.Println("[evm.go] ret[0] == 0xEF", ret[0] == 0xef)
-	fmt.Println("[evm.go] evm.chainRules.IsLondon", evm.chainRules.IsLondon)
-	fmt.Println("[evm.go] evm.chainRules.IsShanghai", evm.chainRules.IsShanghai)
 	// Reject code starting with 0xEF if EIP-3541 is enabled.
 	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsLondon && !evm.chainRules.IsShanghai {
 		err = ErrInvalidCode
@@ -493,12 +477,10 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		err = ErrInvalidEOF
 	}
 
-	fmt.Println("[evm.go] >>>here?")
 	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsShanghai {
 		var c Container
 		err = c.UnmarshalBinary(ret)
 		//err = c.ValidateCode(evm.interpreter.cfg.JumpTableEOF)
-		fmt.Println("[evm.go] ??err:", err)
 	}
 
 	// if the contract creation ran successfully and no errors were returned

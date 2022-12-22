@@ -17,9 +17,6 @@
 package vm
 
 import (
-	"encoding/hex"
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -126,7 +123,6 @@ func NewEVMInterpreter(evm *EVM, cfg Config) *EVMInterpreter {
 // considered a revert-and-consume-all-gas operation except for
 // ErrExecutionReverted which means revert-and-keep-gas-left.
 func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (ret []byte, err error) {
-	fmt.Println("[interpreter.go] Contract:", hex.EncodeToString(contract.Code))
 	// Increment the call depth which is restricted to 1024
 	in.evm.depth++
 	defer func() { in.evm.depth-- }()
@@ -178,8 +174,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	}()
 	contract.Input = input
 
-	fmt.Println("[interpreter.go] contract.IsEOF:", contract.IsEOF())
-
 	if contract.IsEOF() {
 		jt = in.cfg.JumpTableEOF
 	} else {
@@ -209,10 +203,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc, callContext.CodeSection)
-		//fmt.Println("[interpreter.go Code:", hex.EncodeToString(contract.Container.Code[callContext.CodeSection]))
-		fmt.Println("[interpreter.go] pc:", pc)
-		fmt.Println("[interpreter.go] callContext.CodeSection:", callContext.CodeSection)
-		fmt.Println("[interpreter.go] op:", op)
 		operation := jt[op]
 		cost = operation.constantGas // For tracing
 		// Validate stack
@@ -224,7 +214,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		if !contract.UseGas(cost) {
 			return nil, ErrOutOfGas
 		}
-		fmt.Println("here1")
 		if operation.dynamicGas != nil {
 			// All ops with a dynamic memory usage also has a dynamic gas cost.
 			var memorySize uint64
@@ -265,13 +254,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}
 		// execute the operation
 		res, err = operation.execute(&pc, in, callContext)
-
-		fmt.Println("[interpreter.go] operation:", operation)
-		fmt.Println("[interpreter.go] err:", err)
 		if err != nil {
 			break
 		}
-		fmt.Println("here6")
 		pc++
 	}
 

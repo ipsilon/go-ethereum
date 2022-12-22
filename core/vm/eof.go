@@ -18,7 +18,6 @@ package vm
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 )
 
@@ -120,14 +119,6 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 		return fmt.Errorf("number of code sections must not exceed 1024 (got %d)", typesSize)
 	}
 
-	fmt.Println("[eof.go] here")
-	fmt.Println("[eof.go] b:", hex.EncodeToString(b))
-	fmt.Println("[eof.go] kind:", kind)
-	fmt.Println("[eof.go] typesSize:", typesSize)
-	fmt.Println("[eof.go] offsetCodeKind:", offsetCodeKind)
-	fmt.Println("[eof.go] b[offsetcodekind+3:]:", b[offsetCodeKind+2:])
-	fmt.Println("[eof.go] len(b[offsetcodekind+3:]):", len(b[offsetCodeKind+2:]))
-
 	if len(b[offsetCodeKind+3:]) < 2 {
 		return fmt.Errorf("codeSizes not found or incomplete")
 	}
@@ -137,40 +128,26 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 		return fmt.Errorf("expected kind code")
 	}
 	if len(codeSizes) != typesSize/2 {
-		fmt.Println("len(codeSizes):", len(codeSizes))
-		fmt.Println("typesSize:", typesSize)
 		return fmt.Errorf("mismatch of code sections count and type signatures (types %d, code %d)", typesSize/3, len(codeSizes))
 	}
-	fmt.Println("[eof.go] here2")
 
 	// Parse data size.
 	offsetDataKind := offsetCodeKind + 2 + 2*len(codeSizes) + 1
 	if len(b) < offsetDataKind+3 {
 		return fmt.Errorf("container size invalid")
 	}
-	fmt.Println("[eof.go] here3")
-	fmt.Println("[eof.go] len(b):", len(b))
-	fmt.Println("[eof.go] offsetDataKind+3:", offsetDataKind+3)
 	if kind, dataSize = parseSection(b, offsetDataKind); kind != kindData {
 		return fmt.Errorf("expected kind data")
 	}
-	fmt.Println("[eof.go] here4")
 	offsetTerminator := offsetDataKind + 3
 	if check(b, offsetTerminator, 0) {
 		return fmt.Errorf("expected terminator")
 	}
 
-	fmt.Println("[eof.go] here5")
 	// Check for terminator.
 	maxStackHeightSize := typesSize
 	expectedSize := offsetTerminator + typesSize + maxStackHeightSize + sum(codeSizes) + dataSize + 1
 	if len(b) != expectedSize {
-		fmt.Println("offsetTerminator:", offsetTerminator)
-		fmt.Println("typesSize:", typesSize)
-		fmt.Println("sum(codeSizes):", sum(codeSizes))
-		fmt.Println("dataSize:", dataSize)
-		fmt.Println("+1")
-		fmt.Println(offsetTerminator, typesSize, sum(codeSizes), dataSize)
 		return fmt.Errorf("invalid container size (want %d, got %d)", expectedSize, len(b))
 	}
 
@@ -183,7 +160,6 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 			Output:         b[idx+i*4+1],
 			MaxStackHeight: uint16(parseUint16(b[idx+i*4+2:])),
 		}
-		fmt.Println("sig.MaxStackHeight:", sig.MaxStackHeight)
 		if sig.MaxStackHeight > 1024 {
 			return fmt.Errorf("type annotation %d max stack height must not exceed 1024", i)
 		}
@@ -234,7 +210,6 @@ func parseSection(b []byte, idx int) (kind, size int) {
 // parseSectionList decodes a (kind, len, []codeSize) section list from an EOF
 // header.
 func parseSectionList(b []byte, idx int) (kind int, list []int) {
-	fmt.Println("[eof.go] Kind:", b[idx])
 	return int(b[idx]), parseList(b, idx+1)
 }
 
@@ -242,11 +217,7 @@ func parseSectionList(b []byte, idx int) (kind int, list []int) {
 func parseList(b []byte, idx int) []int {
 	count := parseUint16(b[idx:])
 	list := make([]int, count)
-	fmt.Println("\n[eof.go] b:", hex.EncodeToString(b))
-	fmt.Println("[eof.go] idx:", idx)
-	fmt.Println("[eof.go] count:", count)
 	for i := 0; i < count; i++ {
-		fmt.Println(i, idx+2*i+2, hex.EncodeToString(b[idx+2*i+2:]))
 		list[i] = parseUint16(b[idx+2*i+2:])
 	}
 	return list
