@@ -178,6 +178,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	}()
 	contract.Input = input
 
+	fmt.Println("[interpreter.go] contract.IsEOF:", contract.IsEOF())
+
 	if contract.IsEOF() {
 		jt = in.cfg.JumpTableEOF
 	} else {
@@ -199,7 +201,6 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
-	fmt.Println("here?")
 	for {
 		if in.cfg.Debug {
 			// Capture pre-execution values for tracing.
@@ -223,6 +224,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		if !contract.UseGas(cost) {
 			return nil, ErrOutOfGas
 		}
+		fmt.Println("here1")
 		if operation.dynamicGas != nil {
 			// All ops with a dynamic memory usage also has a dynamic gas cost.
 			var memorySize uint64
@@ -263,9 +265,13 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		}
 		// execute the operation
 		res, err = operation.execute(&pc, in, callContext)
+
+		fmt.Println("[interpreter.go] operation:", operation)
+		fmt.Println("[interpreter.go] err:", err)
 		if err != nil {
 			break
 		}
+		fmt.Println("here6")
 		pc++
 	}
 

@@ -145,17 +145,22 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 
 	// Parse data size.
 	offsetDataKind := offsetCodeKind + 2 + 2*len(codeSizes) + 1
-	if len(b) < offsetDataKind+2 {
+	if len(b) < offsetDataKind+3 {
 		return fmt.Errorf("container size invalid")
 	}
+	fmt.Println("[eof.go] here3")
+	fmt.Println("[eof.go] len(b):", len(b))
+	fmt.Println("[eof.go] offsetDataKind+3:", offsetDataKind+3)
 	if kind, dataSize = parseSection(b, offsetDataKind); kind != kindData {
 		return fmt.Errorf("expected kind data")
 	}
+	fmt.Println("[eof.go] here4")
 	offsetTerminator := offsetDataKind + 3
 	if check(b, offsetTerminator, 0) {
 		return fmt.Errorf("expected terminator")
 	}
 
+	fmt.Println("[eof.go] here5")
 	// Check for terminator.
 	maxStackHeightSize := typesSize
 	expectedSize := offsetTerminator + typesSize + maxStackHeightSize + sum(codeSizes) + dataSize + 1
@@ -184,6 +189,11 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 		}
 		types = append(types, sig)
 	}
+
+	if len(types) == 0 {
+		return fmt.Errorf("expected at least 1 type")
+	}
+
 	if types[0].Input != 0 || types[0].Output != 0 {
 		return fmt.Errorf("input and output of first code section must be 0")
 	}

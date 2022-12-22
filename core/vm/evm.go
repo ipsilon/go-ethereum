@@ -447,7 +447,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		var c Container
 		fmt.Println("[evm.go] Unmarshaling")
 		if err := c.UnmarshalBinary(codeAndHash.code); err != nil {
-			fmt.Println("[evm.go] err: ", err)
+			fmt.Println("[evm.go] err??: ", err)
 			return nil, common.Address{}, 0, fmt.Errorf("%v: %v", ErrInvalidEOF, err)
 		}
 		contract.Container = &c
@@ -471,21 +471,34 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	}
 
 	ret, err := evm.interpreter.Run(contract, nil, false)
+	fmt.Println("[eof.go]~err:", err)
 
 	// Check whether the max code size has been exceeded, assign err if the case.
 	if err == nil && evm.chainRules.IsEIP158 && len(ret) > params.MaxCodeSize {
 		err = ErrMaxCodeSizeExceeded
 	}
 
-	fmt.Println("ret:", hex.EncodeToString(ret))
-	fmt.Println("err:", err)
-	fmt.Println("len(ret):", len(ret))
-	fmt.Println("ret[0] == 0xEF", ret[0] == 0xef)
-	fmt.Println("evm.chainRules.IsLondon", evm.chainRules.IsLondon)
-	fmt.Println("evm.chainRules.IsShanghai", evm.chainRules.IsShanghai)
+	fmt.Println("[evm.go] ret:", hex.EncodeToString(ret))
+	fmt.Println("[evm.go] err:", err)
+	fmt.Println("[evm.go] len(ret):", len(ret))
+	//fmt.Println("[evm.go] ret[0] == 0xEF", ret[0] == 0xef)
+	fmt.Println("[evm.go] evm.chainRules.IsLondon", evm.chainRules.IsLondon)
+	fmt.Println("[evm.go] evm.chainRules.IsShanghai", evm.chainRules.IsShanghai)
 	// Reject code starting with 0xEF if EIP-3541 is enabled.
 	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsLondon && !evm.chainRules.IsShanghai {
 		err = ErrInvalidCode
+	}
+
+	if evm.chainRules.IsShanghai && len(ret) >= 1 && ret[0] != 0xef {
+		err = ErrInvalidEOF
+	}
+
+	fmt.Println("[evm.go] >>>here?")
+	if err == nil && len(ret) >= 1 && ret[0] == 0xEF && evm.chainRules.IsShanghai {
+		var c Container
+		err = c.UnmarshalBinary(ret)
+		//err = c.ValidateCode(evm.interpreter.cfg.JumpTableEOF)
+		fmt.Println("[evm.go] ??err:", err)
 	}
 
 	// if the contract creation ran successfully and no errors were returned
