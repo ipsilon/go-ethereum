@@ -153,7 +153,7 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 	// Parse types section.
 	idx := offsetTerminator + 1
 	var types []*FunctionMetadata
-	for i := 0; i < typesSize/2; i++ {
+	for i := 0; i < typesSize/4; i++ {
 		sig := &FunctionMetadata{
 			Input:          b[idx+i*4],
 			Output:         b[idx+i*4+1],
