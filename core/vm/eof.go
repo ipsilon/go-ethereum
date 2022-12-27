@@ -127,8 +127,8 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 	if kind, codeSizes = parseSectionList(b, offsetCodeKind); kind != kindCode {
 		return fmt.Errorf("expected kind code")
 	}
-	if len(codeSizes) != typesSize/2 {
-		return fmt.Errorf("mismatch of code sections count and type signatures (types %d, code %d)", typesSize/3, len(codeSizes))
+	if len(codeSizes) != typesSize/4 {
+		return fmt.Errorf("mismatch of code sections count and type signatures (types %d, code %d)", typesSize/4, len(codeSizes))
 	}
 
 	// Parse data size.
@@ -145,8 +145,7 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 	}
 
 	// Check for terminator.
-	maxStackHeightSize := typesSize
-	expectedSize := offsetTerminator + typesSize + maxStackHeightSize + sum(codeSizes) + dataSize + 1
+	expectedSize := offsetTerminator + typesSize + sum(codeSizes) + dataSize + 1
 	if len(b) != expectedSize {
 		return fmt.Errorf("invalid container size (want %d, got %d)", expectedSize, len(b))
 	}
@@ -176,7 +175,7 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 	c.Types = types
 
 	// Parse code sections.
-	idx += typesSize + maxStackHeightSize
+	idx += typesSize
 	code := make([][]byte, len(codeSizes))
 	for i, size := range codeSizes {
 		if size == 0 {
@@ -217,6 +216,10 @@ func parseSectionList(b []byte, idx int) (kind int, list []int) {
 func parseList(b []byte, idx int) []int {
 	count := parseUint16(b[idx:])
 	list := make([]int, count)
+
+	if count > len(b[idx+2:]) {
+		return []int{}
+	}
 	for i := 0; i < count; i++ {
 		list[i] = parseUint16(b[idx+2*i+2:])
 	}
