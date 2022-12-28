@@ -177,11 +177,8 @@ func validateStack(code []byte, section int, metadata []*FunctionMetadata, jt *J
 					return 0, fmt.Errorf("stack overflow")
 				}
 				height += int(params.StackLimit) - jt[op].maxStack
-				fmt.Println(op, PUSH1, pos)
 				if op >= PUSH1 && op <= PUSH32 {
-					fmt.Println(op, PUSH1, pos)
-					pos += int(op - PUSH1)
-					fmt.Println(pos)
+					pos += int(op-PUSH1) + 2
 				} else {
 					// No immediate.
 					pos += 1
