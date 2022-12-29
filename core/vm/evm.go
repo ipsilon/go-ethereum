@@ -437,7 +437,9 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	contract.SetCodeOptionalHash(&address, codeAndHash)
 
 	// If the initcode is EOF, verify it is well-formed.
+	eofInitcode := false
 	if evm.chainRules.IsShanghai && hasEOFByte(codeAndHash.code) {
+		eofInitcode = true
 		var c Container
 		if err := c.UnmarshalBinary(codeAndHash.code); err != nil {
 			return nil, common.Address{}, 0, fmt.Errorf("%v: %v", ErrInvalidEOF, err)
@@ -479,7 +481,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		err = ErrInvalidCode
 	}
 
-	if evm.chainRules.IsShanghai && len(ret) >= 1 && ret[0] != 0xef {
+	if evm.chainRules.IsShanghai && len(ret) >= 1 && eofInitcode && ret[0] != 0xef {
 		err = ErrInvalidEOF
 	}
 
