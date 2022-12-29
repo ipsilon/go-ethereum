@@ -487,9 +487,9 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		var c Container
 		err = c.UnmarshalBinary(ret)
 
-		//if err != nil {
-		//	err = c.ValidateCode(evm.interpreter.cfg.JumpTableEOF)
-		//}
+		if err == nil {
+			err = c.ValidateCode(evm.interpreter.cfg.JumpTableEOF)
+		}
 	}
 
 	// if the contract creation ran successfully and no errors were returned

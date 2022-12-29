@@ -249,6 +249,13 @@ func enableEOF(jt *JumpTable) {
 	jt[JUMP] = undefined
 	jt[JUMPI] = undefined
 	jt[PC] = undefined
+	jt[INVALID] = &operation{
+		execute:     opInvalid,
+		constantGas: 0,
+		minStack:    minStack(0, 0),
+		maxStack:    maxStack(0, 0),
+		terminal:    true,
+	}
 
 	// New opcodes
 	jt[RJUMP] = &operation{
