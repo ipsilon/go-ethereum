@@ -329,13 +329,14 @@ func opRjumpv(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]b
 		count = uint64(code[*pc+1])
 		idx   = scope.Stack.pop()
 	)
-	if idx.Uint64() >= uint64(count) {
+	idx64, overflow := idx.Uint64WithOverflow()
+	if overflow || idx64 >= count {
 		// Index out-of-bounds, don't branch, just skip over immediate
 		// argument.
 		*pc += 1 + count*2
 		return nil, nil
 	}
-	offset := parseInt16(code[*pc+2+2*idx.Uint64():])
+	offset := parseInt16(code[*pc+2+2*idx64:])
 	*pc = uint64(int64(*pc+2+count*2) + int64(offset) - 1)
 	return nil, nil
 }
