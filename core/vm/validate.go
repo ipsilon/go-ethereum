@@ -157,7 +157,7 @@ func validateStack(code []byte, section int, metadata []*FunctionMetadata, jt *J
 				}
 			case op == RJUMP:
 				arg := parseUint16(code[pos+1:])
-				pos += int(arg)
+				pos += int(arg) + 3
 			case op == RJUMPI:
 				arg := parseUint16(code[pos+1:])
 				worklist = append(worklist, item{pos: pos + int(arg), height: height})
