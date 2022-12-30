@@ -144,8 +144,12 @@ func (c *Contract) AsDelegate() *Contract {
 
 // GetOp returns the n'th element in the contract's byte array
 func (c *Contract) GetOp(n uint64, s uint64) OpCode {
-	if c.IsEOF() && n < uint64(len(c.Container.Code[s])) {
-		return OpCode(c.Container.Code[s][n])
+	if c.IsEOF() {
+		if n < uint64(len(c.Container.Code[s])) {
+			return OpCode(c.Container.Code[s][n])
+		} else {
+			return STOP
+		}
 	} else if n < uint64(len(c.Code)) {
 		return OpCode(c.Code[n])
 	}
