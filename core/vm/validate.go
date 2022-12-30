@@ -89,9 +89,6 @@ func validateCode(code []byte, section int, metadata []*FunctionMetadata, jt *Ju
 		}
 		i += 1
 	}
-	if !jt[op].terminal {
-		return fmt.Errorf("code section ends with non-terminal instruction")
-	}
 	if max, err := validateStack(code, section, metadata, jt); err != nil {
 		return err
 	} else if max != int(metadata[section].MaxStackHeight) {

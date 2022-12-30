@@ -447,10 +447,15 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 
 		err := c.ValidateCode(evm.interpreter.cfg.JumpTableEOF)
 		if err != nil {
-			fmt.Println("err: ", err)
 			return nil, common.Address{}, 0, fmt.Errorf("%v: %v", ErrInvalidEOF, err)
 		}
 		contract.Container = &c
+	}
+
+	if parent, ok := caller.(*Contract); ok {
+		if parent.IsEOF() && !eofInitcode {
+			return nil, common.Address{}, 0, ErrInvalidEOF
+		}
 	}
 
 	// Create a new account on the state
