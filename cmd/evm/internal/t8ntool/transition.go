@@ -263,7 +263,7 @@ func Transition(ctx *cli.Context) error {
 		}
 	}
 	// Sanity check pre-allocated EOF code to not panic in state transition.
-	if chainConfig.IsShanghai(big.NewInt(int64(prestate.Env.Number))) {
+	if chainConfig.IsCancun(big.NewInt(int64(prestate.Env.Number))) {
 		for addr, acc := range prestate.Pre {
 			if vm.HasEOFByte(acc.Code) {
 				var (
@@ -272,7 +272,7 @@ func Transition(ctx *cli.Context) error {
 				)
 				err = c.UnmarshalBinary(acc.Code)
 				if err == nil {
-					jt := vm.NewShanghaiEOFInstructionSetForTesting()
+					jt := vm.NewCancunEOFInstructionSetForTesting()
 					err = c.ValidateCode(&jt)
 				}
 				if err != nil {

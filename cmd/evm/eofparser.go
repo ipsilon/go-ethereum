@@ -32,7 +32,7 @@ import (
 )
 
 func init() {
-	jt = vm.NewShanghaiEOFInstructionSetForTesting()
+	jt = vm.NewCancunEOFInstructionSetForTesting()
 }
 
 var (

@@ -157,11 +157,10 @@ func validateControlFlow(code []byte, section int, metadata []*FunctionMetadata,
 	outer:
 		for pos < len(code) {
 			op := OpCode(code[pos])
-
 			// Check if pos has already be visited; if so, the stack heights should be the same.
 			if want, ok := heights[pos]; ok {
 				if height != want {
-					return 0, fmt.Errorf("%w: have %d, want %d", ErrConflictingStack, height, want)
+					return 0, fmt.Errorf("%w: have %d, want %d (pos: %d)", ErrConflictingStack, height, want, pos)
 				}
 				// Already visited this path and stack height
 				// matches.

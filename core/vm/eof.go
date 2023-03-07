@@ -198,7 +198,7 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 		sig := &FunctionMetadata{
 			Input:          b[idx+i*4],
 			Output:         b[idx+i*4+1],
-			MaxStackHeight: binary.BigEndian.Uint16(b[idx+i*4+2:]),
+			MaxStackHeight: binary.BigEndian.Uint16(b[idx+i*4+2 : idx+i*4+4]),
 		}
 		if sig.Input > maxInputItems {
 			return fmt.Errorf("%w for section %d: have %d", ErrTooManyInputs, i, sig.Input)

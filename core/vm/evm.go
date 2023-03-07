@@ -425,7 +425,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 
 	// Validate initcode per EOF rules. If caller is EOF and initcode is legacy, fail.
 	isInitcodeEOF := hasEOFMagic(codeAndHash.code)
-	if evm.chainRules.IsShanghai {
+	if evm.chainRules.IsCancun {
 		if isInitcodeEOF {
 			// If the initcode is EOF, verify it is well-formed.
 			var c Container
@@ -488,7 +488,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 
 	// Reject code starting with 0xEF if EIP-3541 is enabled.
 	if err == nil && len(ret) >= 1 && HasEOFByte(ret) {
-		if evm.chainRules.IsShanghai {
+		if evm.chainRules.IsCancun {
 			var c Container
 			if err = c.UnmarshalBinary(ret); err == nil {
 				err = c.ValidateCode(evm.interpreter.cfg.JumpTableEOF)
@@ -496,7 +496,7 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 			if err != nil {
 				err = fmt.Errorf("%w: %v", ErrInvalidEOF, err)
 			}
-		} else if evm.chainRules.IsLondon {
+		} else if evm.chainRules.IsLondon || evm.chainRules.IsShanghai {
 			err = ErrInvalidCode
 		}
 	}
@@ -555,9 +555,9 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *
 // ChainConfig returns the environment's chain configuration
 func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 
-// parseContainer tries to parse an EOF container if the Shanghai fork is active. It expects the code to already be validated.
+// parseContainer tries to parse an EOF container if the Cancun fork is active. It expects the code to already be validated.
 func (evm *EVM) parseContainer(b []byte) *Container {
-	if evm.chainRules.IsShanghai {
+	if evm.chainRules.IsCancun {
 		var c Container
 		if err := c.UnmarshalBinary(b); err != nil && strings.HasPrefix(err.Error(), "invalid magic") {
 			return nil
