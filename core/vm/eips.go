@@ -288,7 +288,7 @@ func enableEOF(jt *JumpTable) {
 	}
 	jt[RETF] = &operation{
 		execute:     opRetf,
-		constantGas: GasFastishStep,
+		constantGas: GasFastestStep,
 		minStack:    minStack(0, 0),
 		maxStack:    maxStack(0, 0),
 		terminal:    true,
