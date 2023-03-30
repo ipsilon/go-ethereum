@@ -343,7 +343,7 @@ func opCallf(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]by
 		idx  = binary.BigEndian.Uint16(code[*pc+1:])
 		typ  = scope.Contract.Container.Types[idx]
 	)
-	if scope.Stack.len()+int(typ.MaxStackHeight) >= 1024 {
+	if scope.Stack.len()+int(typ.MaxStackHeight) > 1024 {
 		return nil, fmt.Errorf("stack overflow")
 	}
 	retCtx := &ReturnContext{
