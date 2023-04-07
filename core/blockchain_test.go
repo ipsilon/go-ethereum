@@ -4277,6 +4277,7 @@ func TestEIP3651(t *testing.T) {
 	gspec.Config.BerlinBlock = common.Big0
 	gspec.Config.LondonBlock = common.Big0
 	gspec.Config.ShanghaiTime = common.Big0
+	gspec.Config.CancunTime = common.Big0
 	signer := types.LatestSigner(gspec.Config)
 
 	_, blocks, _ := GenerateChainWithGenesis(gspec, engine, 1, func(i int, b *BlockGen) {
@@ -4465,6 +4466,7 @@ func TestEOF(t *testing.T) {
 	gspec.Config.BerlinBlock = common.Big0
 	gspec.Config.LondonBlock = common.Big0
 	gspec.Config.ShanghaiTime = common.Big0
+	gspec.Config.CancunTime = common.Big0
 	signer := types.LatestSigner(gspec.Config)
 
 	container := vm.Container{

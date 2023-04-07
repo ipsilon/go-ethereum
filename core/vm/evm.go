@@ -417,6 +417,23 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		return nil, common.Address{}, gas, ErrInsufficientBalance
 	}
 
+	// Check for nonce overflow and then update caller nonce by 1.
+	nonce := evm.StateDB.GetNonce(caller.Address())
+	if nonce+1 < nonce {
+		return nil, common.Address{}, gas, ErrNonceUintOverflow
+	}
+	evm.StateDB.SetNonce(caller.Address(), nonce+1)
+	// We add this to the access list _before_ taking a snapshot. Even if the creation fails,
+	// the access-list change should not be rolled back
+	if evm.chainRules.IsBerlin {
+		evm.StateDB.AddAddressToAccessList(address)
+	}
+	// Ensure there's no existing contract already at the designated address
+	contractHash := evm.StateDB.GetCodeHash(address)
+	if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
+		return nil, common.Address{}, 0, ErrContractAddressCollision
+	}
+
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only. If
 	// the initcode is EOF, contract.Container will be set.
@@ -440,22 +457,6 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 			// Don't allow EOF contract to execute legacy initcode.
 			return nil, common.Address{}, 0, ErrLegacyCode
 		}
-	}
-	// Check for nonce overflow and then update caller nonce by 1.
-	nonce := evm.StateDB.GetNonce(caller.Address())
-	if nonce+1 < nonce {
-		return nil, common.Address{}, gas, ErrNonceUintOverflow
-	}
-	evm.StateDB.SetNonce(caller.Address(), nonce+1)
-	// We add this to the access list _before_ taking a snapshot. Even if the creation fails,
-	// the access-list change should not be rolled back
-	if evm.chainRules.IsBerlin {
-		evm.StateDB.AddAddressToAccessList(address)
-	}
-	// Ensure there's no existing contract already at the designated address
-	contractHash := evm.StateDB.GetCodeHash(address)
-	if evm.StateDB.GetNonce(address) != 0 || (contractHash != (common.Hash{}) && contractHash != emptyCodeHash) {
-		return nil, common.Address{}, 0, ErrContractAddressCollision
 	}
 
 	// Create a new account on the state
