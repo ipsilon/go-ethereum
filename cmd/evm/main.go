@@ -142,7 +142,7 @@ var (
 			"\n\tSyntax <forkname>(+ExtraEip)",
 			strings.Join(tests.AvailableForks(), "\n\t    "),
 			strings.Join(vm.ActivateableEips(), ", ")),
-		Value: "Shanghai",
+		Value: "Cancun",
 	}
 	RefTestFlag = &cli.StringFlag{
 		Name:  "test",
@@ -217,6 +217,7 @@ var eofParserCommand = &cli.Command{
 		VerbosityFlag,
 		HexFlag,
 		RefTestFlag,
+		ForknameFlag,
 	},
 }
 

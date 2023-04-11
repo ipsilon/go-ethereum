@@ -23,11 +23,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/tests"
 	"github.com/urfave/cli/v2"
 )
 
@@ -80,14 +83,39 @@ func eofParser(ctx *cli.Context) error {
 	glogger.Verbosity(log.Lvl(ctx.Int(VerbosityFlag.Name)))
 	log.Root().SetHandler(glogger)
 
+	var chainConfig *params.ChainConfig
+
+	if ctx.IsSet(ForknameFlag.Name) {
+		if cConf, _, err := tests.GetChainConfig(ctx.String(ForknameFlag.Name)); err != nil {
+			return fmt.Errorf("invalid fork name: %w", err)
+		} else {
+			chainConfig = cConf
+		}
+	} else {
+		if cConf, _, err := tests.GetChainConfig("Cancun"); err != nil {
+			return fmt.Errorf("invalid fork name: %w", err)
+		} else {
+			chainConfig = cConf
+		}
+	}
+
 	// If `--hex` is set, parse and validate the hex string argument.
 	if ctx.IsSet(HexFlag.Name) {
 		if _, err := parseAndValidate(ctx.String(HexFlag.Name)); err != nil {
 			if err2 := errors.Unwrap(err); err2 != nil {
 				err = err2
 			}
-			return fmt.Errorf("err(%d): %w", errorMap[err.Error()], err)
+			if chainConfig.IsCancun(new(big.Int)) {
+				return fmt.Errorf("err(%d): %w", errorMap[err.Error()], err)
+			} else {
+				return fmt.Errorf("err: Invalid Code")
+			}
 		}
+
+		if !chainConfig.IsCancun(new(big.Int)) {
+			return fmt.Errorf("err: Invalid Code")
+		}
+
 		fmt.Println("ok.")
 		return nil
 	}
