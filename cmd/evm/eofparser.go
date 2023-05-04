@@ -159,21 +159,41 @@ func eofParser(ctx *cli.Context) error {
 		return nil
 	}
 
-	// If neither are passed in, read input from stdin.
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		t := strings.TrimSpace(scanner.Text())
+	reader := bufio.NewReader(os.Stdin)
+	prefix := ""
+	for {
+		t, isPrefix, err := reader.ReadLine()
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			fmt.Fprintf(os.Stderr, "err: %v\n", err)
+		}
+
+		if isPrefix {
+			prefix += string(t)
+			continue
+		} else {
+			t = append([]byte(prefix), t...)
+			prefix = ""
+		}
+
 		if len(t) == 0 || t[0] == '#' {
 			continue
 		}
-		if _, err := parseAndValidate(t); err != nil {
+
+		if _, err := parseAndValidate(string(t)); err != nil {
 			if err2 := errors.Unwrap(err); err2 != nil {
 				err = err2
 			}
-			fmt.Fprintf(os.Stderr, "err(%d): %v\n", errorMap[err.Error()], err)
+			if chainConfig.IsCancun(new(big.Int)) {
+				fmt.Fprintf(os.Stderr, "err(%d): %v\n", errorMap[err.Error()], err)
+			} else {
+				fmt.Fprintf(os.Stderr, "err: Invalid Code")
+			}
 		}
 	}
-
 	return nil
 }
 
