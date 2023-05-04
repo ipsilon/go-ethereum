@@ -17,7 +17,6 @@ package vm
 import (
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -119,7 +118,7 @@ func validateCode(code []byte, section int, metadata []*FunctionMetadata, jt *Ju
 // checkDest parses a relative offset at code[0:2] and checks if it is a valid jump destination.
 func checkDest(code []byte, analysis *bitvec, imm, from, length int) error {
 	if len(code) < imm+2 {
-		return io.ErrUnexpectedEOF
+		return ErrTruncatedImmediate
 	}
 	if analysis != nil && *analysis == nil {
 		*analysis = eofCodeBitmap(code)

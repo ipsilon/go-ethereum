@@ -56,6 +56,7 @@ var (
 	ErrInvalidSection0Type    = errors.New("invalid section 0 type, input and output should be zero")
 	ErrTooLargeMaxStackHeight = errors.New("invalid type content, max stack height exceeds limit")
 	ErrInvalidContainerSize   = errors.New("invalid container size")
+	ErrTooManyCodeSections    = errors.New("too many code sections")
 )
 
 var eofMagic = []byte{0xef, 0x00}
@@ -150,9 +151,6 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 	if typesSize < 4 || typesSize%4 != 0 {
 		return fmt.Errorf("%w: type section size must be divisible by 4, have %d", ErrInvalidTypeSize, typesSize)
 	}
-	if typesSize/4 > 1024 {
-		return fmt.Errorf("%w: type section must not exceed 4*1024, have %d", ErrInvalidTypeSize, typesSize)
-	}
 
 	// Parse code section header.
 	kind, codeSizes, err = parseSectionList(b, offsetCodeKind)
@@ -163,7 +161,11 @@ func (c *Container) UnmarshalBinary(b []byte) error {
 		return fmt.Errorf("%w: found section kind %x instead", ErrMissingCodeHeader, kind)
 	}
 	if len(codeSizes) != typesSize/4 {
-		return fmt.Errorf("%w: mismatch of code sections cound and type signatures, types %d, code %d", ErrInvalidCodeSize, typesSize/4, len(codeSizes))
+		return fmt.Errorf("%w: mismatch of code sections cound and type signatures, types %d, code %d", ErrInvalidTypeSize, typesSize/4, len(codeSizes))
+	}
+
+	if len(codeSizes) > 1024 {
+		return fmt.Errorf("%w: code section must not exceed 1024, have %d", ErrTooManyCodeSections, len(codeSizes))
 	}
 
 	// Parse data section header.
