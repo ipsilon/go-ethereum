@@ -182,7 +182,7 @@ func validateControlFlow(code []byte, section int, metadata []*FunctionMetadata,
 				if want, have := int(metadata[arg].Input), height; want > have {
 					return 0, fmt.Errorf("%w: at pos %d", ErrStackUnderflow{stackLen: have, required: want}, pos)
 				}
-				if have, limit := int(metadata[arg].Output)+height, int(params.StackLimit); have > limit {
+				if have, limit := int(metadata[arg].MaxStackHeight)+height, int(params.StackLimit); have > limit {
 					return 0, fmt.Errorf("%w: at pos %d", ErrStackOverflow{stackLen: have, limit: limit}, pos)
 				}
 				height -= int(metadata[arg].Input)
